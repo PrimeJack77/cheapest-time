@@ -1,0 +1,12 @@
+{
+  "domain": "cheapest_time",
+  "name": "Cheapest Time",
+  "codeowners": ["@your-github-username"],
+  "config_flow": true,
+  "documentation": "https://github.com/your-github-username/cheapest_time",
+  "integration_type": "service",
+  "iot_class": "calculated",
+  "issue_tracker": "https://github.com/your-github-username/cheapest_time/issues",
+  "requirements": [],
+  "version": "1.0.0"
+}
