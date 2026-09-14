@@ -14,7 +14,7 @@ from homeassistant.helpers.entity import DeviceInfo
 from homeassistant.helpers.entity_platform import AddEntitiesCallback
 from homeassistant.helpers.update_coordinator import CoordinatorEntity
 
-from . import OptimalStartCoordinator
+from . import CheapestTimeCoordinator
 from .const import CONF_PROFILE, DOMAIN
 
 
@@ -22,11 +22,11 @@ async def async_setup_entry(
     hass: HomeAssistant, entry: ConfigEntry, async_add_entities: AddEntitiesCallback
 ) -> None:
     """Set up the boolean "is optimal now" entity for one usage."""
-    coordinator: OptimalStartCoordinator = hass.data[DOMAIN][entry.entry_id]
-    async_add_entities([OptimalPeriodBinarySensor(coordinator, entry)])
+    coordinator: CheapestTimeCoordinator = hass.data[DOMAIN][entry.entry_id]
+    async_add_entities([CheapestPeriodBinarySensor(coordinator, entry)])
 
 
-class OptimalPeriodBinarySensor(CoordinatorEntity[OptimalStartCoordinator], BinarySensorEntity):
+class CheapestPeriodBinarySensor(CoordinatorEntity[CheapestTimeCoordinator], BinarySensorEntity):
     """True when the usage should be running/started right now.
 
     - Automatic profile: true between the optimal start time and the end
@@ -39,7 +39,7 @@ class OptimalPeriodBinarySensor(CoordinatorEntity[OptimalStartCoordinator], Bina
     _attr_translation_key = "is_optimal_period"
     _attr_icon = "mdi:timer-check-outline"
 
-    def __init__(self, coordinator: OptimalStartCoordinator, entry: ConfigEntry) -> None:
+    def __init__(self, coordinator: CheapestTimeCoordinator, entry: ConfigEntry) -> None:
         super().__init__(coordinator)
         self._entry = entry
         self._attr_unique_id = f"{entry.entry_id}_is_optimal_period"

@@ -5,7 +5,7 @@ the choices made by the user:
 
     user/init -> consumption -> [curve | power -> duration] -> [manual_options] -> finish
 
-The shared step logic lives in :class:`OptimalStartFlowMixin` so that the
+The shared step logic lives in :class:`CheapestTimeFlowMixin` so that the
 initial config flow and the later options flow stay in sync.
 """
 from __future__ import annotations
@@ -62,7 +62,7 @@ def _validate_curve(raw: str) -> dict[str, float]:
     return {k: float(v) for k, v in data.items()}
 
 
-class OptimalStartFlowMixin:
+class CheapestTimeFlowMixin:
     """Shared step implementations for the config flow and the options flow."""
 
     _data: dict[str, Any]
@@ -256,7 +256,7 @@ class OptimalStartFlowMixin:
         raise NotImplementedError
 
 
-class OptimalStartConfigFlow(config_entries.ConfigFlow, OptimalStartFlowMixin, domain=DOMAIN):
+class CheapestTimeConfigFlow(config_entries.ConfigFlow, CheapestTimeFlowMixin, domain=DOMAIN):
     """Handle the initial configuration of an Cheapest Time usage."""
 
     VERSION = 1
@@ -273,10 +273,10 @@ class OptimalStartConfigFlow(config_entries.ConfigFlow, OptimalStartFlowMixin, d
     @staticmethod
     @callback
     def async_get_options_flow(config_entry: config_entries.ConfigEntry):
-        return OptimalStartOptionsFlow(config_entry)
+        return CheapestTimeOptionsFlow(config_entry)
 
 
-class OptimalStartOptionsFlow(config_entries.OptionsFlow, OptimalStartFlowMixin):
+class CheapestTimeOptionsFlow(config_entries.OptionsFlow, CheapestTimeFlowMixin):
     """Handle updating an existing Cheapest Time usage."""
 
     def __init__(self, config_entry: config_entries.ConfigEntry) -> None:

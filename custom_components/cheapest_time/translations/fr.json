@@ -128,7 +128,7 @@
   },
   "entity": {
     "sensor": {
-      "cheapest_time_time": {
+      "start_time": {
         "name": "Heure de lancement optimale"
       },
       "cost_at_optimal": {

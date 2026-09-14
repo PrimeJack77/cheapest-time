@@ -15,7 +15,7 @@ from homeassistant.helpers.entity import DeviceInfo
 from homeassistant.helpers.entity_platform import AddEntitiesCallback
 from homeassistant.helpers.update_coordinator import CoordinatorEntity
 
-from . import OptimalStartCoordinator
+from . import CheapestTimeCoordinator
 from .const import (
     ATTR_FORECAST_COST,
     ATTR_FORECAST_KWH,
@@ -29,23 +29,23 @@ async def async_setup_entry(
     hass: HomeAssistant, entry: ConfigEntry, async_add_entities: AddEntitiesCallback
 ) -> None:
     """Set up the sensor entities for one Cheapest Time usage."""
-    coordinator: OptimalStartCoordinator = hass.data[DOMAIN][entry.entry_id]
+    coordinator: CheapestTimeCoordinator = hass.data[DOMAIN][entry.entry_id]
 
     async_add_entities(
         [
-            OptimalStartTimeSensor(coordinator, entry),
-            OptimalStartCostSensor(coordinator, entry),
-            OptimalStartConsumptionSensor(coordinator, entry),
+            CheapestTimeTimeSensor(coordinator, entry),
+            CheapestTimeCostSensor(coordinator, entry),
+            CheapestTimeConsumptionSensor(coordinator, entry),
         ]
     )
 
 
-class OptimalStartEntityBase(CoordinatorEntity[OptimalStartCoordinator], SensorEntity):
+class CheapestTimeEntityBase(CoordinatorEntity[CheapestTimeCoordinator], SensorEntity):
     """Common base for all Cheapest Time sensors of a given usage."""
 
     _attr_has_entity_name = True
 
-    def __init__(self, coordinator: OptimalStartCoordinator, entry: ConfigEntry) -> None:
+    def __init__(self, coordinator: CheapestTimeCoordinator, entry: ConfigEntry) -> None:
         super().__init__(coordinator)
         self._entry = entry
         self._attr_device_info = DeviceInfo(
@@ -56,16 +56,16 @@ class OptimalStartEntityBase(CoordinatorEntity[OptimalStartCoordinator], SensorE
         )
 
 
-class OptimalStartTimeSensor(OptimalStartEntityBase):
+class CheapestTimeTimeSensor(CheapestTimeEntityBase):
     """The computed optimal start time for the usage."""
 
     _attr_device_class = SensorDeviceClass.TIMESTAMP
-    _attr_translation_key = "cheapest_time_time"
+    _attr_translation_key = "start_time"
     _attr_icon = "mdi:clock-start"
 
-    def __init__(self, coordinator: OptimalStartCoordinator, entry: ConfigEntry) -> None:
+    def __init__(self, coordinator: CheapestTimeCoordinator, entry: ConfigEntry) -> None:
         super().__init__(coordinator, entry)
-        self._attr_unique_id = f"{entry.entry_id}_cheapest_time_time"
+        self._attr_unique_id = f"{entry.entry_id}_start_time"
 
     @property
     def native_value(self):
@@ -83,7 +83,7 @@ class OptimalStartTimeSensor(OptimalStartEntityBase):
         }
 
 
-class OptimalStartCostSensor(OptimalStartEntityBase):
+class CheapestTimeCostSensor(CheapestTimeEntityBase):
     """Total cost of the usage if started at the optimal time."""
 
     _attr_state_class = SensorStateClass.MEASUREMENT
@@ -91,7 +91,7 @@ class OptimalStartCostSensor(OptimalStartEntityBase):
     _attr_icon = "mdi:cash"
     _attr_suggested_display_precision = 4
 
-    def __init__(self, coordinator: OptimalStartCoordinator, entry: ConfigEntry) -> None:
+    def __init__(self, coordinator: CheapestTimeCoordinator, entry: ConfigEntry) -> None:
         super().__init__(coordinator, entry)
         self._attr_unique_id = f"{entry.entry_id}_cost_at_optimal"
 
@@ -117,7 +117,7 @@ class OptimalStartCostSensor(OptimalStartEntityBase):
         return {ATTR_FORECAST_COST: data.forecast_cost}
 
 
-class OptimalStartConsumptionSensor(OptimalStartEntityBase):
+class CheapestTimeConsumptionSensor(CheapestTimeEntityBase):
     """Expected consumption of the usage for the current 15-minute slot."""
 
     _attr_device_class = SensorDeviceClass.ENERGY
@@ -127,7 +127,7 @@ class OptimalStartConsumptionSensor(OptimalStartEntityBase):
     _attr_icon = "mdi:flash"
     _attr_suggested_display_precision = 3
 
-    def __init__(self, coordinator: OptimalStartCoordinator, entry: ConfigEntry) -> None:
+    def __init__(self, coordinator: CheapestTimeCoordinator, entry: ConfigEntry) -> None:
         super().__init__(coordinator, entry)
         self._attr_unique_id = f"{entry.entry_id}_current_consumption"
 

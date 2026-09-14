@@ -7,12 +7,13 @@ electricity price entity, and exposes the result as several entities:
 - the optimal start time
 - a boolean telling whether "now" is the right moment to run the appliance
 - the total cost of the run if started at the optimal time (with a
-  ``forecast_cost`` attribute detailing the cost for every candidate start)
+  ``forecast_cost`` attribute detailing the cost for every known 15-minute
+  slot of today and tomorrow, regardless of "now" or the search horizon)
 - the expected consumption for the current 15-minute slot (with a
   ``forecast_kwh`` attribute detailing the full load curve anchored at the
   optimal start time)
 
-All the heavy lifting happens in :class:`OptimalStartCoordinator` below.
+All the heavy lifting happens in :class:`CheapestTimeCoordinator` below.
 """
 from __future__ import annotations
 
@@ -69,7 +70,7 @@ STEP = timedelta(minutes=TIME_STEP_MINUTES)
 # Data structures
 # ---------------------------------------------------------------------------
 @dataclass
-class OptimalStartResult:
+class CheapestTimeResult:
     """Result of a computation cycle, consumed by the entities."""
 
     cheapest_time: datetime | None = None
@@ -217,7 +218,7 @@ def _curve_from_power(power_w: float, duration_minutes: float) -> list[float]:
 # ---------------------------------------------------------------------------
 # Coordinator
 # ---------------------------------------------------------------------------
-class OptimalStartCoordinator(DataUpdateCoordinator[OptimalStartResult]):
+class CheapestTimeCoordinator(DataUpdateCoordinator[CheapestTimeResult]):
     """Coordinator computing the optimal start time for one usage."""
 
     def __init__(self, hass: HomeAssistant, entry: ConfigEntry) -> None:
@@ -346,36 +347,39 @@ class OptimalStartCoordinator(DataUpdateCoordinator[OptimalStartResult]):
         return [slot for slot in known_slots if now_floor <= slot <= horizon_end]
 
     @staticmethod
-    def _compute_optimal(
-        price_grid: dict[datetime, float],
-        curve_slots: list[float],
-        candidate_starts: list[datetime],
-    ) -> tuple[datetime | None, float | None, list[dict]]:
-        """Find the cheapest feasible start among the candidates.
+    def _cost_for_start(
+        price_grid: dict[datetime, float], curve_slots: list[float], start: datetime
+    ) -> float | None:
+        """Return the total run cost if started at ``start``, or None if the
+        price for at least one required 15-minute slot is not known yet."""
+        cost = 0.0
+        for i, kwh in enumerate(curve_slots):
+            price = price_grid.get(start + i * STEP)
+            if price is None:
+                return None
+            cost += kwh * price
+        return cost
 
-        Candidates are expected to be sorted chronologically. Ties are
-        naturally resolved in favour of the earliest (closest in time)
-        candidate because we only replace the current best on a strictly
-        lower cost.
+    @classmethod
+    def _compute_full_forecast_cost(
+        cls, price_grid: dict[datetime, float], curve_slots: list[float]
+    ) -> list[dict]:
+        """Cost of running the usage at every known 15-minute slot.
+
+        Unlike the candidate search used to pick the actual recommended
+        start (bounded by "now", the manual horizon, or the hourly-timer
+        constraint), this attribute is intentionally NOT time-filtered: it
+        covers every 15-minute step of today and tomorrow for which prices
+        are known (including past slots), so the user can see the full
+        cost landscape. A slot is only omitted if the run starting there
+        would extend past the known price data.
         """
-        best_start: datetime | None = None
-        best_cost: float | None = None
-        forecast: list[dict] = []
         n = len(curve_slots)
-
-        for start in candidate_starts:
-            cost = 0.0
-            feasible = True
-            for i, kwh in enumerate(curve_slots):
-                slot = start + i * STEP
-                price = price_grid.get(slot)
-                if price is None:
-                    feasible = False
-                    break
-                cost += kwh * price
-            if not feasible:
+        forecast: list[dict] = []
+        for start in sorted(price_grid.keys()):
+            cost = cls._cost_for_start(price_grid, curve_slots, start)
+            if cost is None:
                 continue
-
             end = start + n * STEP
             forecast.append(
                 {
@@ -384,13 +388,36 @@ class OptimalStartCoordinator(DataUpdateCoordinator[OptimalStartResult]):
                     ATTR_COST: round(cost, 4),
                 }
             )
+        return forecast
+
+    @classmethod
+    def _compute_optimal(
+        cls,
+        price_grid: dict[datetime, float],
+        curve_slots: list[float],
+        candidate_starts: list[datetime],
+    ) -> tuple[datetime | None, float | None]:
+        """Find the cheapest feasible start among the (time-filtered) candidates.
+
+        Candidates are expected to be sorted chronologically. Ties are
+        naturally resolved in favour of the earliest (closest in time)
+        candidate because we only replace the current best on a strictly
+        lower cost.
+        """
+        best_start: datetime | None = None
+        best_cost: float | None = None
+
+        for start in candidate_starts:
+            cost = cls._cost_for_start(price_grid, curve_slots, start)
+            if cost is None:
+                continue
             if best_cost is None or cost < best_cost - 1e-9:
                 best_cost = cost
                 best_start = start
 
-        return best_start, best_cost, forecast
+        return best_start, best_cost
 
-    async def _async_update_data(self) -> OptimalStartResult:
+    async def _async_update_data(self) -> CheapestTimeResult:
         now = dt_util.now()
         now_floor = _floor_to_step(now)
 
@@ -401,12 +428,13 @@ class OptimalStartCoordinator(DataUpdateCoordinator[OptimalStartResult]):
             raise UpdateFailed("Unable to build a consumption curve for this usage")
 
         candidates = self._get_candidate_starts(now_floor, price_grid)
-        cheapest_time, optimal_cost, forecast_cost = self._compute_optimal(
-            price_grid, curve_slots, candidates
-        )
+        cheapest_time, optimal_cost = self._compute_optimal(price_grid, curve_slots, candidates)
 
-        result = OptimalStartResult(currency=currency)
-        result.forecast_cost = forecast_cost
+        result = CheapestTimeResult(currency=currency)
+        # forecast_cost is intentionally not restricted to `candidates`: it
+        # covers every known 15-minute slot of today and tomorrow, regardless
+        # of "now", the manual horizon, or the hourly-timer constraint.
+        result.forecast_cost = self._compute_full_forecast_cost(price_grid, curve_slots)
         result.run_duration_minutes = len(curve_slots) * TIME_STEP_MINUTES
 
         if cheapest_time is None:
@@ -455,7 +483,7 @@ class OptimalStartCoordinator(DataUpdateCoordinator[OptimalStartResult]):
 # ---------------------------------------------------------------------------
 async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
     """Set up Cheapest Time from a config entry."""
-    coordinator = OptimalStartCoordinator(hass, entry)
+    coordinator = CheapestTimeCoordinator(hass, entry)
     await coordinator.async_setup()
 
     try:
@@ -480,6 +508,6 @@ async def async_unload_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
     """Unload a config entry."""
     unload_ok = await hass.config_entries.async_unload_platforms(entry, PLATFORMS)
     if unload_ok:
-        coordinator: OptimalStartCoordinator = hass.data[DOMAIN].pop(entry.entry_id)
+        coordinator: CheapestTimeCoordinator = hass.data[DOMAIN].pop(entry.entry_id)
         coordinator.async_unload()
     return unload_ok
