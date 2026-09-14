@@ -1,0 +1,147 @@
+{
+  "config": {
+    "step": {
+      "user": {
+        "title": "Nouvel usage à optimiser",
+        "description": "Configurez un nouvel appareil/usage dont l'heure de lancement doit être optimisée selon le prix de l'électricité.",
+        "data": {
+          "name": "Nom",
+          "price_entity": "Entité de prix de l'électricité",
+          "profile": "Profil"
+        }
+      },
+      "consumption": {
+        "title": "Saisie de la consommation",
+        "description": "Comment la consommation de cet usage est-elle décrite ?",
+        "data": {
+          "consumption_mode": "Mode de consommation"
+        }
+      },
+      "curve": {
+        "title": "Courbe de consommation",
+        "description": "Objet JSON associant un temps écoulé (HH:MM depuis le début du cycle) à l'énergie consommée (kWh) pendant ce pas. Exemple : {\"00:00\": 0.1, \"00:15\": 0.2, \"00:30\": 0.1}",
+        "data": {
+          "consumption_curve_raw": "Courbe de consommation (JSON)"
+        }
+      },
+      "power": {
+        "title": "Puissance nominale",
+        "data": {
+          "nominal_power": "Puissance nominale (W)",
+          "duration_mode": "Source de la durée"
+        }
+      },
+      "duration": {
+        "title": "Durée du cycle",
+        "data": {
+          "duration_fixed": "Durée fixe (minutes)",
+          "duration_entity": "Entité de durée"
+        }
+      },
+      "manual_options": {
+        "title": "Options du profil manuel",
+        "description": "Options spécifiques au profil manuel (ex : lave-linge, lave-vaisselle).",
+        "data": {
+          "horizon_hours": "Horizon de recherche (heures à partir de maintenant)",
+          "hourly_timer_only": "L'appareil ne dispose que d'un timer par pas d'1 heure"
+        }
+      }
+    },
+    "error": {
+      "invalid_curve": "Courbe de consommation invalide. Utilisez un objet JSON tel que {\"00:00\": 0.1, \"00:15\": 0.2}."
+    },
+    "abort": {
+      "already_configured": "Cet usage est déjà configuré."
+    }
+  },
+  "options": {
+    "step": {
+      "init": {
+        "title": "Nouvel usage à optimiser",
+        "description": "Mettez à jour la configuration de cet usage.",
+        "data": {
+          "name": "Nom",
+          "price_entity": "Entité de prix de l'électricité",
+          "profile": "Profil"
+        }
+      },
+      "consumption": {
+        "title": "Saisie de la consommation",
+        "description": "Comment la consommation de cet usage est-elle décrite ?",
+        "data": {
+          "consumption_mode": "Mode de consommation"
+        }
+      },
+      "curve": {
+        "title": "Courbe de consommation",
+        "description": "Objet JSON associant un temps écoulé (HH:MM depuis le début du cycle) à l'énergie consommée (kWh) pendant ce pas. Exemple : {\"00:00\": 0.1, \"00:15\": 0.2, \"00:30\": 0.1}",
+        "data": {
+          "consumption_curve_raw": "Courbe de consommation (JSON)"
+        }
+      },
+      "power": {
+        "title": "Puissance nominale",
+        "data": {
+          "nominal_power": "Puissance nominale (W)",
+          "duration_mode": "Source de la durée"
+        }
+      },
+      "duration": {
+        "title": "Durée du cycle",
+        "data": {
+          "duration_fixed": "Durée fixe (minutes)",
+          "duration_entity": "Entité de durée"
+        }
+      },
+      "manual_options": {
+        "title": "Options du profil manuel",
+        "description": "Options spécifiques au profil manuel (ex : lave-linge, lave-vaisselle).",
+        "data": {
+          "horizon_hours": "Horizon de recherche (heures à partir de maintenant)",
+          "hourly_timer_only": "L'appareil ne dispose que d'un timer par pas d'1 heure"
+        }
+      }
+    },
+    "error": {
+      "invalid_curve": "Courbe de consommation invalide. Utilisez un objet JSON tel que {\"00:00\": 0.1, \"00:15\": 0.2}."
+    }
+  },
+  "selector": {
+    "profile": {
+      "options": {
+        "manual": "Manuel (conseil d'heure de lancement)",
+        "automatic": "Automatique (piloté sur 24h)"
+      }
+    },
+    "consumption_mode": {
+      "options": {
+        "curve": "Courbe de consommation (par pas de temps)",
+        "power": "Puissance nominale + durée"
+      }
+    },
+    "duration_mode": {
+      "options": {
+        "fixed": "Durée fixe",
+        "entity": "Depuis une autre entité"
+      }
+    }
+  },
+  "entity": {
+    "sensor": {
+      "cheapest_time_time": {
+        "name": "Heure de lancement optimale"
+      },
+      "cost_at_optimal": {
+        "name": "Coût au lancement optimal"
+      },
+      "current_consumption": {
+        "name": "Consommation prévue actuelle"
+      }
+    },
+    "binary_sensor": {
+      "is_optimal_period": {
+        "name": "Période optimale"
+      }
+    }
+  }
+}
