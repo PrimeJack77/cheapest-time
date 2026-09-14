@@ -1,0 +1,147 @@
+{
+  "config": {
+    "step": {
+      "user": {
+        "title": "New usage to optimize",
+        "description": "Configure a new appliance/usage whose start time should be optimized against electricity prices.",
+        "data": {
+          "name": "Name",
+          "price_entity": "Electricity price entity",
+          "profile": "Profile"
+        }
+      },
+      "consumption": {
+        "title": "Consumption input",
+        "description": "How is the consumption of this usage described?",
+        "data": {
+          "consumption_mode": "Consumption mode"
+        }
+      },
+      "curve": {
+        "title": "Consumption curve",
+        "description": "JSON object mapping elapsed time (HH:MM from the start of the run) to the energy consumed (kWh) during that step. Example: {\"00:00\": 0.1, \"00:15\": 0.2, \"00:30\": 0.1}",
+        "data": {
+          "consumption_curve_raw": "Consumption curve (JSON)"
+        }
+      },
+      "power": {
+        "title": "Nominal power",
+        "data": {
+          "nominal_power": "Nominal power (W)",
+          "duration_mode": "Duration source"
+        }
+      },
+      "duration": {
+        "title": "Run duration",
+        "data": {
+          "duration_fixed": "Fixed duration (minutes)",
+          "duration_entity": "Duration entity"
+        }
+      },
+      "manual_options": {
+        "title": "Manual profile options",
+        "description": "Options specific to the manual profile (e.g. washing machine, dishwasher).",
+        "data": {
+          "horizon_hours": "Search horizon (hours from now)",
+          "hourly_timer_only": "Appliance only supports a 1-hour step timer"
+        }
+      }
+    },
+    "error": {
+      "invalid_curve": "Invalid consumption curve. Use a JSON object such as {\"00:00\": 0.1, \"00:15\": 0.2}."
+    },
+    "abort": {
+      "already_configured": "This usage is already configured."
+    }
+  },
+  "options": {
+    "step": {
+      "init": {
+        "title": "New usage to optimize",
+        "description": "Update the configuration of this usage.",
+        "data": {
+          "name": "Name",
+          "price_entity": "Electricity price entity",
+          "profile": "Profile"
+        }
+      },
+      "consumption": {
+        "title": "Consumption input",
+        "description": "How is the consumption of this usage described?",
+        "data": {
+          "consumption_mode": "Consumption mode"
+        }
+      },
+      "curve": {
+        "title": "Consumption curve",
+        "description": "JSON object mapping elapsed time (HH:MM from the start of the run) to the energy consumed (kWh) during that step. Example: {\"00:00\": 0.1, \"00:15\": 0.2, \"00:30\": 0.1}",
+        "data": {
+          "consumption_curve_raw": "Consumption curve (JSON)"
+        }
+      },
+      "power": {
+        "title": "Nominal power",
+        "data": {
+          "nominal_power": "Nominal power (W)",
+          "duration_mode": "Duration source"
+        }
+      },
+      "duration": {
+        "title": "Run duration",
+        "data": {
+          "duration_fixed": "Fixed duration (minutes)",
+          "duration_entity": "Duration entity"
+        }
+      },
+      "manual_options": {
+        "title": "Manual profile options",
+        "description": "Options specific to the manual profile (e.g. washing machine, dishwasher).",
+        "data": {
+          "horizon_hours": "Search horizon (hours from now)",
+          "hourly_timer_only": "Appliance only supports a 1-hour step timer"
+        }
+      }
+    },
+    "error": {
+      "invalid_curve": "Invalid consumption curve. Use a JSON object such as {\"00:00\": 0.1, \"00:15\": 0.2}."
+    }
+  },
+  "selector": {
+    "profile": {
+      "options": {
+        "manual": "Manual (advisory start time)",
+        "automatic": "Automatic (controlled over 24h)"
+      }
+    },
+    "consumption_mode": {
+      "options": {
+        "curve": "Consumption curve (per time step)",
+        "power": "Nominal power + duration"
+      }
+    },
+    "duration_mode": {
+      "options": {
+        "fixed": "Fixed duration",
+        "entity": "From another entity"
+      }
+    }
+  },
+  "entity": {
+    "sensor": {
+      "cheapest_time_time": {
+        "name": "Optimal start time"
+      },
+      "cost_at_optimal": {
+        "name": "Cost at optimal start"
+      },
+      "current_consumption": {
+        "name": "Current expected consumption"
+      }
+    },
+    "binary_sensor": {
+      "is_optimal_period": {
+        "name": "Optimal period"
+      }
+    }
+  }
+}
