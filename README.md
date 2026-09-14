@@ -50,7 +50,7 @@ price entity, and exposes the result as several entities.
 ### Via HACS (custom repository)
 
 1. In Home Assistant, go to **HACS > Integrations > ⋮ > Custom repositories**.
-2. Add this repository's URL, category **Integration**.
+2. Add `https://github.com/PrimeJack77/cheapest-time`, category **Integration**.
 3. Search for "Cheapest Time" in HACS and install it.
 4. Restart Home Assistant.
 5. Go to **Settings > Devices & Services > Add Integration** and search for
