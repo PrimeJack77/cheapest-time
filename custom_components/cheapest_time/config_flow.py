@@ -130,8 +130,8 @@ class CheapestTimeFlowMixin:
     async def async_step_curve(self, user_input: dict[str, Any] | None = None):
         errors: dict[str, str] = {}
         current = self._data.get(CONF_CONSUMPTION_CURVE)
-        default_raw = json.dumps(current) if current else '{"00:00": 0.1, "00:15": 0.2}'
-
+        default_raw = json.dumps(current) if current else '''Ex Washing Machine : {"00:00":0.210,"00:15":0.240,"00:30":0.015,"00:45":0.023}
+Ex Dish Washer : {"00:00":0.007,"00:15":0.167,"00:30":0.333,"00:45":0.008,"01:00":0.011,"01:15":0.013,"01:30":0.007,"01:45":0.325,"02:00":0.008}'''
         if user_input is not None:
             try:
                 curve = _validate_curve(user_input["consumption_curve_raw"])
