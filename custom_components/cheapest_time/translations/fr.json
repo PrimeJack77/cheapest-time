@@ -131,8 +131,8 @@
       "start_time": {
         "name": "Heure de lancement optimale"
       },
-      "cost_at_optimal": {
-        "name": "Coût au lancement optimal"
+      "cost_now": {
+        "name": "Coût si lancé maintenant"
       },
       "current_consumption": {
         "name": "Consommation prévue actuelle"

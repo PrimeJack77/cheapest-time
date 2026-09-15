@@ -131,8 +131,8 @@
       "start_time": {
         "name": "Optimal start time"
       },
-      "cost_at_optimal": {
-        "name": "Cost at optimal start"
+      "cost_now": {
+        "name": "Cost if started now"
       },
       "current_consumption": {
         "name": "Current expected consumption"

@@ -40,10 +40,10 @@ price entity, and exposes the result as several entities.
 
 | Entity | Description |
 | --- | --- |
-| `sensor.<name>_cheapest_time_time` | Timestamp of the optimal start. Attributes: `run_end_time`, `run_duration_minutes`. |
+| `sensor.<name>_start_time` | Timestamp of the optimal start. Attributes: `run_end_time`, `run_duration_minutes`, `cost` (total cost of the run if started at this optimal time). |
 | `binary_sensor.<name>_is_optimal_period` | `on` when now is within the optimal run window (automatic profile) or during the single recommended 15-minute slot (manual profile). |
-| `sensor.<name>_cost_at_optimal` | Total cost of the run if started at the optimal time. Attribute `forecast_cost`: list of `{start_time, end_time, cost}` — the total run cost for **every known 15-minute slot of today and tomorrow** (past slots included), not restricted by "now", the manual horizon, or the hourly-timer constraint. A slot is omitted only if the run starting there would extend past the known price data. |
-| `sensor.<name>_current_consumption` | Expected consumption (kWh) of the current 15-minute slot, assuming the run started (or will start) at the optimal time. Attribute `forecast_kwh`: list of `{start_time, end_time, kwh}` describing the full load curve anchored at the optimal start. |
+| `sensor.<name>_cost_at_optimal` | Cost of the usage **if launched right now** (current 15-minute slot). Attribute `forecast_cost`: list of `{start_time, end_time, cost}` — the cost for every later slot, from the one right after "now" up to the last slot for which prices are known (the price horizon). Independent of the optimal start selection. |
+| `sensor.<name>_current_consumption` | Expected consumption (kWh) of the current 15-minute slot, assuming the run started (or will start) at the optimal time — unchanged. Attribute `forecast_kwh`: list of `{start_time, end_time, kwh}`, zero-padded outside the actual run window, spanning the **same horizon as `forecast_cost`** (from the slot after "now" to the last known price slot) so both attributes line up for charting. |
 
 ## Installation
 

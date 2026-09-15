@@ -17,6 +17,7 @@ from homeassistant.helpers.update_coordinator import CoordinatorEntity
 
 from . import CheapestTimeCoordinator
 from .const import (
+    ATTR_COST,
     ATTR_FORECAST_COST,
     ATTR_FORECAST_KWH,
     ATTR_RUN_DURATION_MINUTES,
@@ -80,14 +81,20 @@ class CheapestTimeTimeSensor(CheapestTimeEntityBase):
         return {
             ATTR_RUN_END_TIME: run_end.isoformat(),
             ATTR_RUN_DURATION_MINUTES: data.run_duration_minutes,
+            ATTR_COST: round(data.optimal_cost, 4) if data.optimal_cost is not None else None,
         }
 
 
 class CheapestTimeCostSensor(CheapestTimeEntityBase):
-    """Total cost of the usage if started at the optimal time."""
+    """Cost of the usage if it were launched right now (current 15-minute slot).
+
+    The `forecast_cost` attribute lists the cost for every later slot, from
+    the one right after "now" up to the last slot for which prices are
+    known (the price horizon) — independent of the optimal start selection.
+    """
 
     _attr_state_class = SensorStateClass.MEASUREMENT
-    _attr_translation_key = "cost_at_optimal"
+    _attr_translation_key = "cost_now"
     _attr_icon = "mdi:cash"
     _attr_suggested_display_precision = 4
 
@@ -98,7 +105,9 @@ class CheapestTimeCostSensor(CheapestTimeEntityBase):
     @property
     def native_value(self):
         data = self.coordinator.data
-        return data.optimal_cost if data else None
+        if not data or data.cost_now is None:
+            return None
+        return round(data.cost_now, 4)
 
     @property
     def native_unit_of_measurement(self):
