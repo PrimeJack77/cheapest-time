@@ -1,4 +1,4 @@
-{
+﻿{
   "domain": "cheapest_time",
   "name": "Cheapest Time",
   "codeowners": ["@PrimeJack77"],
@@ -8,4 +8,5 @@
   "iot_class": "calculated",
   "issue_tracker": "https://github.com/PrimeJack77/cheapest-time/issues",
   "requirements": [],
-  "version": "1.0.5"
+  "version": "1.0.4"
+}
