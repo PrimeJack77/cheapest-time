@@ -75,6 +75,7 @@ class CheapestTimeResult:
 
     cheapest_time: datetime | None = None
     optimal_cost: float | None = None
+    cost_now: float | None = None
     run_duration_minutes: int = 0
     is_optimal_period: bool = False
     current_consumption_kwh: float = 0.0
@@ -366,22 +367,20 @@ class CheapestTimeCoordinator(DataUpdateCoordinator[CheapestTimeResult]):
         return cost
 
     @classmethod
-    def _compute_full_forecast_cost(
-        cls, price_grid: dict[datetime, float], curve_slots: list[float]
+    def _compute_forecast_cost(
+        cls,
+        price_grid: dict[datetime, float],
+        curve_slots: list[float],
+        min_start: datetime,
     ) -> list[dict]:
-        """Cost of running the usage at every known 15-minute slot.
-
-        Unlike the candidate search used to pick the actual recommended
-        start (bounded by "now", the manual horizon, or the hourly-timer
-        constraint), this attribute is intentionally NOT time-filtered: it
-        covers every 15-minute step of today and tomorrow for which prices
-        are known (including past slots), so the user can see the full
-        cost landscape. A slot is only omitted if the run starting there
-        would extend past the known price data.
+        """Cost of running the usage at every known 15-minute slot from
+        ``min_start`` (inclusive) up to the last slot for which prices are
+        known (the price horizon). A slot is omitted only if the run
+        starting there would extend past the known price data.
         """
         n = len(curve_slots)
         forecast: list[dict] = []
-        for start in sorted(price_grid.keys()):
+        for start in sorted(slot for slot in price_grid if slot >= min_start):
             cost = cls._cost_for_start(price_grid, curve_slots, start)
             if cost is None:
                 continue
@@ -432,46 +431,71 @@ class CheapestTimeCoordinator(DataUpdateCoordinator[CheapestTimeResult]):
         if not curve_slots:
             raise UpdateFailed("Unable to build a consumption curve for this usage")
 
+        n = len(curve_slots)
         candidates = self._get_candidate_starts(now_floor, price_grid)
         cheapest_time, optimal_cost = self._compute_optimal(price_grid, curve_slots, candidates)
 
         result = CheapestTimeResult(currency=currency)
-        # forecast_cost is intentionally not restricted to `candidates`: it
-        # covers every known 15-minute slot of today and tomorrow, regardless
-        # of "now", the manual horizon, or the hourly-timer constraint.
-        result.forecast_cost = self._compute_full_forecast_cost(price_grid, curve_slots)
-        result.run_duration_minutes = len(curve_slots) * TIME_STEP_MINUTES
+        result.run_duration_minutes = n * TIME_STEP_MINUTES
+
+        # "Cost if launched now": state = cost of starting right at the
+        # current 15-minute slot. forecast_cost lists the cost for every
+        # later slot, from the one right after "now" up to the last slot
+        # for which prices are known (the price horizon).
+        result.cost_now = self._cost_for_start(price_grid, curve_slots, now_floor)
+        horizon_start = now_floor + STEP
+        future_slots = sorted(slot for slot in price_grid if slot >= horizon_start)
+        result.forecast_cost = self._compute_forecast_cost(price_grid, curve_slots, horizon_start)
 
         if cheapest_time is None:
             _LOGGER.debug(
                 "No feasible start time found for %s (missing price data for the full run)",
                 self.entry.title,
             )
+            # No anchor to project the load curve onto: the consumption
+            # forecast is zero over the whole horizon, but it still spans
+            # the same time range as forecast_cost.
+            result.forecast_kwh = [
+                {
+                    ATTR_START_TIME: slot.isoformat(),
+                    ATTR_END_TIME: (slot + STEP).isoformat(),
+                    ATTR_KWH: 0.0,
+                }
+                for slot in future_slots
+            ]
             return result
 
         result.cheapest_time = cheapest_time
         result.optimal_cost = optimal_cost
 
-        # Anchor the consumption curve on the optimal start to build
-        # forecast_kwh and derive the current slot's expected consumption.
-        forecast_kwh = []
+        # Current slot's expected consumption (state) — unchanged: still
+        # anchored on the actual optimal start.
         current_kwh = 0.0
         for i, kwh in enumerate(curve_slots):
             slot_start = cheapest_time + i * STEP
             slot_end = slot_start + STEP
+            if slot_start <= now < slot_end:
+                current_kwh = kwh
+        result.current_consumption_kwh = current_kwh
+
+        # forecast_kwh now spans the same horizon as forecast_cost (from the
+        # slot after "now" to the last known price slot), zero-padded
+        # outside the actual run window, so both attributes line up for
+        # charting.
+        forecast_kwh = []
+        for slot in future_slots:
+            index = (slot - cheapest_time) // STEP
+            kwh = curve_slots[index] if 0 <= index < n else 0.0
             forecast_kwh.append(
                 {
-                    ATTR_START_TIME: slot_start.isoformat(),
-                    ATTR_END_TIME: slot_end.isoformat(),
+                    ATTR_START_TIME: slot.isoformat(),
+                    ATTR_END_TIME: (slot + STEP).isoformat(),
                     ATTR_KWH: round(kwh, 4),
                 }
             )
-            if slot_start <= now < slot_end:
-                current_kwh = kwh
         result.forecast_kwh = forecast_kwh
-        result.current_consumption_kwh = current_kwh
 
-        run_end = cheapest_time + len(curve_slots) * STEP
+        run_end = cheapest_time + n * STEP
         profile = self._conf(CONF_PROFILE)
         if profile == PROFILE_AUTOMATIC:
             result.is_optimal_period = cheapest_time <= now < run_end
