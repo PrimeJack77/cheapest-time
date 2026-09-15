@@ -321,10 +321,15 @@ class CheapestTimeCoordinator(DataUpdateCoordinator[CheapestTimeResult]):
         known_slots = sorted(price_grid.keys())
 
         if profile == PROFILE_AUTOMATIC:
-            # Every known price slot from now until the end of available
-            # price data (today, plus tomorrow once published, usually
-            # around 1pm).
-            return [slot for slot in known_slots if slot >= now_floor]
+            # The automatic profile always evaluates the full set of known
+            # price data (today's 24h plus tomorrow's 24h once published),
+            # independently of the current time. This is intentional: once
+            # the cheapest window of the day is known, it must not shift
+            # later in the day just because that window has already
+            # elapsed — the appliance is expected to have run automatically
+            # at that time. Only the price data availability decides the
+            # window, never "now".
+            return known_slots
 
         # Manual profile: bounded by the configured horizon.
         horizon_hours = float(self._conf(CONF_HORIZON_HOURS, DEFAULT_HORIZON_HOURS))
