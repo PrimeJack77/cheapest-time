@@ -20,7 +20,7 @@ from __future__ import annotations
 import logging
 import math
 from dataclasses import dataclass, field
-from datetime import datetime, timedelta
+from datetime import date, datetime, timedelta
 
 import voluptuous as vol
 from homeassistant.config_entries import ConfigEntry
@@ -421,6 +421,28 @@ class CheapestTimeCoordinator(DataUpdateCoordinator[CheapestTimeResult]):
 
         return best_start, best_cost
 
+    @classmethod
+    def _compute_daily_anchors(
+        cls, price_grid: dict[datetime, float], curve_slots: list[float]
+    ) -> list[datetime]:
+        """Cheapest feasible start for each calendar day present in the
+        price data (typically today and tomorrow).
+
+        Used for the automatic profile so ``forecast_kwh`` can show one
+        consumption placement for day J and another one for day J+1,
+        instead of a single placement for the whole known horizon.
+        """
+        days: dict[date, list[datetime]] = {}
+        for slot in price_grid:
+            days.setdefault(slot.date(), []).append(slot)
+
+        anchors: list[datetime] = []
+        for day in sorted(days):
+            day_start, _ = cls._compute_optimal(price_grid, curve_slots, sorted(days[day]))
+            if day_start is not None:
+                anchors.append(day_start)
+        return anchors
+
     async def _async_update_data(self) -> CheapestTimeResult:
         now = dt_util.now()
         now_floor = _floor_to_step(now)
@@ -467,6 +489,7 @@ class CheapestTimeCoordinator(DataUpdateCoordinator[CheapestTimeResult]):
 
         result.cheapest_time = cheapest_time
         result.optimal_cost = optimal_cost
+        profile = self._conf(CONF_PROFILE)
 
         # Current slot's expected consumption (state) — unchanged: still
         # anchored on the actual optimal start.
@@ -480,12 +503,28 @@ class CheapestTimeCoordinator(DataUpdateCoordinator[CheapestTimeResult]):
 
         # forecast_kwh now spans the same horizon as forecast_cost (from the
         # slot after "now" to the last known price slot), zero-padded
-        # outside the actual run window, so both attributes line up for
+        # outside the actual run window(s), so both attributes line up for
         # charting.
+        #
+        # Automatic profile: one consumption placement per calendar day
+        # present in the price data (today, and tomorrow once published),
+        # each at that day's own cheapest feasible start — giving early
+        # visibility on tomorrow's run instead of a single placement for
+        # the whole known horizon.
+        # Manual profile: unchanged, a single placement anchored on the
+        # one recommended start time.
+        if profile == PROFILE_AUTOMATIC:
+            anchors = self._compute_daily_anchors(price_grid, curve_slots)
+        else:
+            anchors = [cheapest_time]
+
         forecast_kwh = []
         for slot in future_slots:
-            index = (slot - cheapest_time) // STEP
-            kwh = curve_slots[index] if 0 <= index < n else 0.0
+            kwh = 0.0
+            for anchor in anchors:
+                index = (slot - anchor) // STEP
+                if 0 <= index < n:
+                    kwh += curve_slots[index]
             forecast_kwh.append(
                 {
                     ATTR_START_TIME: slot.isoformat(),
@@ -496,7 +535,6 @@ class CheapestTimeCoordinator(DataUpdateCoordinator[CheapestTimeResult]):
         result.forecast_kwh = forecast_kwh
 
         run_end = cheapest_time + n * STEP
-        profile = self._conf(CONF_PROFILE)
         if profile == PROFILE_AUTOMATIC:
             result.is_optimal_period = cheapest_time <= now < run_end
         else:
