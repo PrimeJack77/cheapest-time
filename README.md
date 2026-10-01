@@ -29,9 +29,15 @@ price entity, and exposes the result as several entities.
      yourself (washing machine, dishwasher). If the appliance only offers
      a 1-hour step timer, enable "hourly timer only" so candidates are
      restricted to whole-hour offsets from now.
-   - **Automatic**: candidate start times cover the full 24h of every day
-     for which prices are known (today, and tomorrow once published).
-     Useful for appliances you control automatically (water heater).
+   - **Automatic**: the recommended start is the cheapest moment within
+     **today's 24h only** — it does not shift later in the day once that
+     moment has elapsed (the appliance is expected to run automatically
+     at that time), and it does not jump to tomorrow just because
+     tomorrow's prices (published around 1pm) turn out cheaper; tomorrow
+     becomes "today" at the next calendar day rollover. Useful for
+     appliances you control automatically (water heater). Tomorrow's own
+     cheapest window is still visible ahead of time via the
+     `forecast_kwh` attribute (see below).
 5. Among all feasible candidates (i.e. those for which the full run's
    price is known), the cheapest one is selected. On equal cost, the
    **earliest** (closest in time) candidate wins.
