@@ -322,15 +322,25 @@ class CheapestTimeCoordinator(DataUpdateCoordinator[CheapestTimeResult]):
         known_slots = sorted(price_grid.keys())
 
         if profile == PROFILE_AUTOMATIC:
-            # The automatic profile always evaluates the full set of known
-            # price data (today's 24h plus tomorrow's 24h once published),
-            # independently of the current time. This is intentional: once
-            # the cheapest window of the day is known, it must not shift
-            # later in the day just because that window has already
-            # elapsed — the appliance is expected to have run automatically
-            # at that time. Only the price data availability decides the
-            # window, never "now".
-            return known_slots
+            # The automatic profile's recommended start is always picked
+            # among TODAY's 24h only (the calendar day of "now"), never
+            # across the full known horizon. Two things must both hold:
+            # - it must not shift later in the day just because the
+            #   cheapest moment of today has already elapsed (the
+            #   appliance is expected to have run automatically at that
+            #   time) — handled by not filtering on "now" below;
+            # - it must not jump to tomorrow just because tomorrow's
+            #   prices turn out cheaper once they are published (usually
+            #   around 1pm) — handled by restricting candidates to today's
+            #   calendar date. Otherwise a mid-afternoon price publication
+            #   could silently abandon today's already-decided window in
+            #   favour of a cheaper slot tomorrow, and the appliance would
+            #   never run today.
+            # Tomorrow's own cheapest window is still exposed separately
+            # via forecast_kwh (see _compute_daily_anchors) and will
+            # naturally become "today" once the calendar day rolls over.
+            today = now_floor.date()
+            return [slot for slot in known_slots if slot.date() == today]
 
         # Manual profile: bounded by the configured horizon.
         horizon_hours = float(self._conf(CONF_HORIZON_HOURS, DEFAULT_HORIZON_HOURS))
